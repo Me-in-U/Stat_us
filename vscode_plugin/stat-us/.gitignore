@@ -1,0 +1,16 @@
+# VS Code extension ignores
+node_modules/
+out/
+.vscode-test/
+*.vsix
+
+# Logs/coverage
+logs/
+*.log
+coverage/
+
+# OS/Editor
+.DS_Store
+.idea/
+.vscode/
+!.vscode/extensions.json

@@ -1,0 +1,97 @@
+{
+	"name": "stat-us",
+	"displayName": "Stat-us",
+	"description": "VS Code 작업 상태(브랜치, 파일, 작업 시간 등)를 주기적으로 Spring Boot 서버로 전송합니다.",
+	"version": "0.0.1",
+	"publisher": "meinu",
+	"engines": {
+		"vscode": "^1.105.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "stat-us.start",
+				"title": "Stat-us: 전송 시작"
+			},
+			{
+				"command": "stat-us.stop",
+				"title": "Stat-us: 전송 중지"
+			},
+			{
+				"command": "stat-us.sendNow",
+				"title": "Stat-us: 지금 즉시 전송"
+			},
+			{
+				"command": "stat-us.setApiKey",
+				"title": "Stat-us: API 키 설정"
+			}
+		],
+		"configuration": {
+			"title": "Stat-us",
+			"properties": {
+				"stat-us.enable": {
+					"type": "boolean",
+					"default": true,
+					"description": "VS Code 시작 시 자동으로 전송 기능을 활성화합니다."
+				},
+				"stat-us.backendUrl": {
+					"type": "string",
+					"default": "",
+					"description": "Spring Boot 수신 엔드포인트 URL (예: http://localhost:8080/api/ingest/vscode)"
+				},
+				"stat-us.apiKey": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "요청 헤더에 `x-api-key`로 포함될 API Key (옵션)."
+				},
+				"stat-us.intervalSeconds": {
+					"type": "number",
+					"default": 10,
+					"minimum": 5,
+					"description": "전송 주기(초)."
+				},
+				"stat-us.idleThresholdSeconds": {
+					"type": "number",
+					"default": 60,
+					"minimum": 10,
+					"description": "마지막 활동 이후 이 시간(초) 이상이면 비활성(idle)로 간주합니다."
+				},
+				"stat-us.sendCode": {
+					"type": "boolean",
+					"default": false,
+					"description": "활성 파일의 전체 코드를 함께 전송합니다. 개인정보/보안 이슈에 유의하세요."
+				},
+				"stat-us.maxCodeLength": {
+					"type": "number",
+					"default": 0,
+					"minimum": 0,
+					"description": "전송할 코드의 최대 길이(문자). 0이면 코드를 전송하지 않습니다."
+				}
+			}
+		}
+	},
+	"extensionDependencies": [
+		"vscode.git"
+	],
+	"scripts": {
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "vscode-test"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@types/vscode": "^1.105.0",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "22.x",
+		"eslint": "^9.36.0",
+		"@vscode/test-cli": "^0.0.11",
+		"@vscode/test-electron": "^2.5.2"
+	}
+}
