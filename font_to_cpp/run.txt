@@ -1,0 +1,9 @@
+python font2waveshare.py ^
+  --ttf "C:\Users\Zoe_Lowell\AppData\Local\Microsoft\Windows\Fonts\Maplestory Light.ttf" ^
+  --size 64 ^
+  --name Maple64 ^
+  --out .\fonts ^
+  --digits-only ^
+  --force-width 48 ^
+  --force-height 72 ^
+  --include-fonts-h
