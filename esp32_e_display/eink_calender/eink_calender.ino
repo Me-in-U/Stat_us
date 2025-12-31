@@ -341,6 +341,7 @@ void drawEventsForDay(int year, int month, int day, int x, int y, int w, int h, 
 void drawCalendar(struct tm *timeinfo) {
   int year = timeinfo->tm_year + 1900;
   int month = timeinfo->tm_mon + 1; // 1-12
+  int today = timeinfo->tm_mday; // Today's date
   
   // Draw Days of Week (Korean)
   const char* days[] = {"일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"};
@@ -416,7 +417,19 @@ void drawCalendar(struct tm *timeinfo) {
       // Draw Day Number (Using Korean Font for style)
       char dayStr[4];
       sprintf(dayStr, "%d", currentDay);
-      Paint_DrawString_CN(x + 3, y + 3, dayStr, &Font20KR, BLACK, WHITE);
+      
+      if (currentDay == today) {
+        // Highlight Today: Thick Border
+        Paint_DrawRectangle(x + 1, y + 1, x + cellWidth - 1, y + cellHeight - 1, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
+        
+        // Highlight Today: Inverted Number Background
+        // Font20KR ASCII width is approx 15px. Height is 20px.
+        int numW = (currentDay < 10) ? 15 : 30; 
+        Paint_DrawRectangle(x + 3, y + 3, x + 3 + numW, y + 3 + 20, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+        Paint_DrawString_CN(x + 3, y + 3, dayStr, &Font20KR, WHITE, BLACK);
+      } else {
+        Paint_DrawString_CN(x + 3, y + 3, dayStr, &Font20KR, BLACK, WHITE);
+      }
 
       // Draw Events for this day
       drawEventsForDay(year, month, currentDay, x, y, cellWidth, cellHeight, doc);
