@@ -245,8 +245,7 @@ void drawCalendar(struct tm *timeinfo) {
   const char* days[] = {"일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"};
   int cellWidth = EPD_WIDTH / 7;
   int headerHeight = 30; // Reduced header height (only for day names)
-  int cellHeight = (EPD_HEIGHT - headerHeight) / 6; // Max 6 rows
-
+  
   for (int i = 0; i < 7; i++) {
     // Center the text
     // Font20KR width is 20. "일요일" is 3 chars -> 60px width.
@@ -274,6 +273,11 @@ void drawCalendar(struct tm *timeinfo) {
     daysInMonth = 31;
   }
 
+  // Calculate number of weeks needed
+  // (startDayOfWeek + daysInMonth + 6) / 7 gives the number of rows
+  int numWeeks = (startDayOfWeek + daysInMonth + 6) / 7;
+  int cellHeight = (EPD_HEIGHT - headerHeight) / numWeeks;
+
   // Fetch Events
   // Allocate on heap to avoid stack overflow
   // Increased size to hold events from multiple calendars
@@ -282,7 +286,7 @@ void drawCalendar(struct tm *timeinfo) {
 
   // Draw Grid and Days
   int currentDay = 1;
-  for (int row = 0; row < 6; row++) {
+  for (int row = 0; row < numWeeks; row++) {
     for (int col = 0; col < 7; col++) {
       if (row == 0 && col < startDayOfWeek) {
         continue;
