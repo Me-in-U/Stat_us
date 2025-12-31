@@ -179,90 +179,161 @@ long getDateValue(String dateStr) {
          dateStr.substring(8, 10).toInt();
 }
 
-void drawEventsForDay(int year, int month, int day, int x, int y, int w, int h, DynamicJsonDocument *doc) {
-  int eventY = y + 25;
-  JsonArray events = doc->as<JsonArray>();
-  long currentVal = year * 10000L + month * 100L + day;
+void drawTruncatedString(int x, int y, int w, String text) {
+  // Font12KR: ASCII ~9px (0.75), KR 12px
+  int asciiW = 9;
+  int krW = 12;
+  int availableW = w - 5; 
   
-  for (JsonObject event : events) {
-    const char* summary = event["summary"];
-    
-    String startStr, endStr;
-    bool isAllDay = false;
+  char buffer[128]; 
+  int currentW = 0;
+  int srcIdx = 0;
+  int dstIdx = 0;
+  
+  const char* summary = text.c_str();
 
-    if (event["start"]["date"]) {
-      // All Day Event
-      startStr = String((const char*)event["start"]["date"]);
-      endStr = String((const char*)event["end"]["date"]);
-      isAllDay = true;
-    } else if (event["start"]["dateTime"]) {
-      // Timed Event
-      startStr = String((const char*)event["start"]["dateTime"]).substring(0, 10);
-      endStr = String((const char*)event["end"]["dateTime"]).substring(0, 10);
-    } else {
-      continue;
-    }
-
-    long sVal = getDateValue(startStr);
-    long eVal = getDateValue(endStr);
-
-    bool shouldDraw = false;
-    if (isAllDay) {
-      // All-day events: end date is exclusive (e.g., Jan 1 to Jan 2 means just Jan 1)
-      // So we check: start <= current < end
-      if (currentVal >= sVal && currentVal < eVal) {
-        shouldDraw = true;
-      }
-    } else {
-      // Timed events: usually start and end on same day, but if spanning:
-      // Check: start <= current <= end
-      if (currentVal >= sVal && currentVal <= eVal) {
-        shouldDraw = true;
-      }
-    }
-
-    if (shouldDraw) {
-      // Draw event
-      // Truncate summary to fit width dynamically
-      // Font12KR: ASCII ~9px (0.75), KR 12px
-      int asciiW = 9;
-      int krW = 12;
-      int availableW = w - 5; // Increased padding (4px left + 1px right)
+  while (summary[srcIdx] != '\0') {
+      unsigned char c = (unsigned char)summary[srcIdx];
+      int len = 1;
+      int charW = asciiW;
       
+      if (c == ' ' || c == '[' || c == ']' || c == ',') charW = asciiW / 2; 
+      
+      if (c >= 0xC0) { 
+         charW = krW;
+         if (c >= 0xF0) len = 4;
+         else if (c >= 0xE0) len = 3;
+         else len = 2;
+      }
+      
+      if (currentW + charW > availableW) break;
+      if (dstIdx + len >= 127) break; 
+      
+      for(int k=0; k<len; k++) {
+          buffer[dstIdx++] = summary[srcIdx++];
+      }
+      currentW += charW;
+  }
+  buffer[dstIdx] = '\0';
+  
+  Paint_DrawString_CN(x + 4, y, buffer, &Font12KR, BLACK, WHITE);
+}
+
+int drawWrappedString(int x, int y, int w, int h, int startY, String text) {
+  int asciiW = 9;
+  int krW = 12;
+  int availableW = w - 5; 
+  
+  const char* str = text.c_str();
+  int srcIdx = 0;
+  int currentY = startY;
+  
+  while (str[srcIdx] != '\0') {
+      if (currentY > y + h - 12) break; // No more vertical space
+
       char buffer[128]; 
       int currentW = 0;
-      int srcIdx = 0;
       int dstIdx = 0;
       
-      while (summary[srcIdx] != '\0') {
-          unsigned char c = (unsigned char)summary[srcIdx];
+      while (str[srcIdx] != '\0') {
+          unsigned char c = (unsigned char)str[srcIdx];
           int len = 1;
           int charW = asciiW;
           
-          if (c == ' ' || c == '[' || c == ']') charW = asciiW / 2; // Narrow chars
+          if (c == ' ' || c == '[' || c == ']' || c == ',') charW = asciiW / 2; 
           
-          if (c >= 0xC0) { // Multi-byte
+          if (c >= 0xC0) { 
              charW = krW;
              if (c >= 0xF0) len = 4;
              else if (c >= 0xE0) len = 3;
              else len = 2;
           }
           
-          if (currentW + charW > availableW) break;
-          if (dstIdx + len >= 127) break; // Buffer safety
+          if (currentW + charW > availableW) break; 
+          if (dstIdx + len >= 127) break; 
           
           for(int k=0; k<len; k++) {
-              buffer[dstIdx++] = summary[srcIdx++];
+              buffer[dstIdx++] = str[srcIdx++];
           }
           currentW += charW;
       }
       buffer[dstIdx] = '\0';
       
-      // Use CN function for Korean support
-      // Note: Paint_DrawString_CN handles UTF-8 if the font table is generated correctly
-      Paint_DrawString_CN(x + 4, eventY, buffer, &Font12KR, BLACK, WHITE);
-      eventY += 12; // Font height
-      if (eventY > y + h - 12) break; // No more space
+      Paint_DrawString_CN(x + 4, currentY, buffer, &Font12KR, BLACK, WHITE);
+      currentY += 12;
+  }
+  return currentY;
+}
+
+void drawEventsForDay(int year, int month, int day, int x, int y, int w, int h, DynamicJsonDocument *doc) {
+  int eventY = y + 25;
+  JsonArray events = doc->as<JsonArray>();
+  long currentVal = year * 10000L + month * 100L + day;
+  
+  String birthdaySummary = "";
+  
+  // Pass 1: Collect Birthdays
+  for (JsonObject event : events) {
+    const char* summaryStr = event["summary"];
+    String summary = String(summaryStr);
+    
+    String startStr, endStr;
+    bool isAllDay = false;
+    if (event["start"]["date"]) {
+      startStr = String((const char*)event["start"]["date"]);
+      endStr = String((const char*)event["end"]["date"]);
+      isAllDay = true;
+    } else if (event["start"]["dateTime"]) {
+      startStr = String((const char*)event["start"]["dateTime"]).substring(0, 10);
+      endStr = String((const char*)event["end"]["dateTime"]).substring(0, 10);
+    } else { continue; }
+
+    long sVal = getDateValue(startStr);
+    long eVal = getDateValue(endStr);
+    bool shouldDraw = false;
+    if (isAllDay) { if (currentVal >= sVal && currentVal < eVal) shouldDraw = true; }
+    else { if (currentVal >= sVal && currentVal <= eVal) shouldDraw = true; }
+
+    if (shouldDraw && summary.endsWith("님의 생일")) {
+        String name = summary.substring(0, summary.lastIndexOf("님의 생일"));
+        if (birthdaySummary.length() > 0) birthdaySummary += ", ";
+        birthdaySummary += name;
+    }
+  }
+
+  // Draw Birthday Line
+  if (birthdaySummary.length() > 0) {
+      eventY = drawWrappedString(x, y, w, h, eventY, "[생일] " + birthdaySummary);
+  }
+
+  // Pass 2: Draw Other Events
+  for (JsonObject event : events) {
+    const char* summaryStr = event["summary"];
+    String summary = String(summaryStr);
+    
+    if (summary.endsWith("님의 생일")) continue; // Skip birthdays
+
+    String startStr, endStr;
+    bool isAllDay = false;
+    if (event["start"]["date"]) {
+      startStr = String((const char*)event["start"]["date"]);
+      endStr = String((const char*)event["end"]["date"]);
+      isAllDay = true;
+    } else if (event["start"]["dateTime"]) {
+      startStr = String((const char*)event["start"]["dateTime"]).substring(0, 10);
+      endStr = String((const char*)event["end"]["dateTime"]).substring(0, 10);
+    } else { continue; }
+
+    long sVal = getDateValue(startStr);
+    long eVal = getDateValue(endStr);
+    bool shouldDraw = false;
+    if (isAllDay) { if (currentVal >= sVal && currentVal < eVal) shouldDraw = true; }
+    else { if (currentVal >= sVal && currentVal <= eVal) shouldDraw = true; }
+
+    if (shouldDraw) {
+      if (eventY > y + h - 12) break;
+      drawTruncatedString(x, eventY, w, summary);
+      eventY += 12;
     }
   }
 }

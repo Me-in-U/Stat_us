@@ -653,7 +653,7 @@ void Paint_DrawString_CN(UWORD Xstart, UWORD Ystart, const char * pString, cFONT
                 }
             }
             /* Point on the next character */
-            if (*p_text == ' ' || *p_text == '[' || *p_text == ']') {
+            if (*p_text == ' ' || *p_text == '[' || *p_text == ']' || *p_text == ',') {
                 x += font->ASCII_Width / 2;
             } else {
                 x += font->ASCII_Width;
