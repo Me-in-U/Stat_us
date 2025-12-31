@@ -53,13 +53,21 @@ def generate_c_font(ttf_path, size, out_path):
                 if x + bbox[0] < 0:
                     x = -bbox[0]
 
-                # Special handling for brackets to reduce whitespace
-                # Align LEFT for both, and we will reduce the advance width in the C code
-                if char in ["[", "]"]:
+                # Special handling for brackets and comma to reduce whitespace
+                # Align LEFT for all, and we will reduce the advance width in the C code
+                if char in ["[", "]", ","]:
                     x = 0 - bbox[0]
                     # Optional: Add 1px padding for aesthetics if needed, but 0 is safest for "removing whitespace"
 
                 y = (height - h) // 2 - bbox[1]
+
+                # Fix vertical alignment for comma (prevent it from floating in middle)
+                if char == ",":
+                    # Align bottom of glyph to bottom of cell with small padding
+                    # y + bbox[3] = height - padding
+                    padding = max(1, int(height * 0.15))
+                    y = height - padding - bbox[3]
+
                 draw.text((x, y), char, font=font, fill="black")
             else:
                 draw.text((0, 0), char, font=font, fill="black")
