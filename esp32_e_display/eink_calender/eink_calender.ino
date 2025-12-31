@@ -171,27 +171,57 @@ void fetchEvents(int year, int month, int daysInMonth, DynamicJsonDocument *doc)
   Serial.printf("Total events fetched: %d\n", allEvents.size());
 }
 
+// Helper to convert "YYYY-MM-DD" to long YYYYMMDD
+long getDateValue(String dateStr) {
+  if (dateStr.length() < 10) return 0;
+  return dateStr.substring(0, 4).toInt() * 10000 + 
+         dateStr.substring(5, 7).toInt() * 100 + 
+         dateStr.substring(8, 10).toInt();
+}
+
 void drawEventsForDay(int year, int month, int day, int x, int y, int w, int h, DynamicJsonDocument *doc) {
   int eventY = y + 25;
   JsonArray events = doc->as<JsonArray>();
+  long currentVal = year * 10000L + month * 100L + day;
   
   for (JsonObject event : events) {
     const char* summary = event["summary"];
-    const char* start = event["start"]["date"]; // All day
-    const char* startDateTime = event["start"]["dateTime"]; // Timed
+    
+    String startStr, endStr;
+    bool isAllDay = false;
 
-    String eventDateStr;
-    if (start) {
-      eventDateStr = String(start);
-    } else if (startDateTime) {
-      eventDateStr = String(startDateTime).substring(0, 10);
+    if (event["start"]["date"]) {
+      // All Day Event
+      startStr = String((const char*)event["start"]["date"]);
+      endStr = String((const char*)event["end"]["date"]);
+      isAllDay = true;
+    } else if (event["start"]["dateTime"]) {
+      // Timed Event
+      startStr = String((const char*)event["start"]["dateTime"]).substring(0, 10);
+      endStr = String((const char*)event["end"]["dateTime"]).substring(0, 10);
+    } else {
+      continue;
     }
 
-    int eYear = eventDateStr.substring(0, 4).toInt();
-    int eMonth = eventDateStr.substring(5, 7).toInt();
-    int eDay = eventDateStr.substring(8, 10).toInt();
+    long sVal = getDateValue(startStr);
+    long eVal = getDateValue(endStr);
 
-    if (eYear == year && eMonth == month && eDay == day) {
+    bool shouldDraw = false;
+    if (isAllDay) {
+      // All-day events: end date is exclusive (e.g., Jan 1 to Jan 2 means just Jan 1)
+      // So we check: start <= current < end
+      if (currentVal >= sVal && currentVal < eVal) {
+        shouldDraw = true;
+      }
+    } else {
+      // Timed events: usually start and end on same day, but if spanning:
+      // Check: start <= current <= end
+      if (currentVal >= sVal && currentVal <= eVal) {
+        shouldDraw = true;
+      }
+    }
+
+    if (shouldDraw) {
       // Draw event
       // Truncate summary to fit width dynamically
       // Font12KR: ASCII ~9px (0.75), KR 12px
