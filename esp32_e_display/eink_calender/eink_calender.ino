@@ -77,11 +77,17 @@ void setup() {
   EPD_7IN5_V2_Sleep();
   free(BlackImage);
   BlackImage = NULL;
+
+  // Deep Sleep for 1 hour (3600 seconds)
+  // ESP32 will restart after waking up
+  uint64_t sleepTime = 3600ULL * 1000000ULL; // 1 hour in microseconds
+  esp_sleep_enable_timer_wakeup(sleepTime);
+  Serial.println("Entering Deep Sleep for 1 hour...");
+  esp_deep_sleep_start();
 }
 
 void loop() {
-  // Nothing to do here
-  delay(100000);
+  // This will not be reached due to deep sleep
 }
 
 void fetchEvents(int year, int month, int daysInMonth, DynamicJsonDocument *doc) {
