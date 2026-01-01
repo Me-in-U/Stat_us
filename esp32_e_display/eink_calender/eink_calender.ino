@@ -20,33 +20,21 @@ const int   daylightOffset_sec = 0;
 // Image buffer
 UBYTE *BlackImage;
 
+// RTC Memory variables (survive Deep Sleep)
+RTC_DATA_ATTR uint32_t lastEventHash = 0;
+RTC_DATA_ATTR int lastDay = -1;
+
 // Forward declarations
-void drawCalendar(struct tm *timeinfo);
+void drawCalendar(struct tm *timeinfo, DynamicJsonDocument *doc);
 void fetchEvents(int year, int month, int daysInMonth, DynamicJsonDocument *doc);
 void drawEventsForDay(int year, int month, int day, int x, int y, int w, int h, DynamicJsonDocument *doc);
+uint32_t computeEventsHash(DynamicJsonDocument *doc);
 
 void setup() {
   Serial.begin(115200);
   
-  // Initialize Display
-  printf("EPD_7IN5_V2_test Demo\r\n");
+  // Initialize GPIOs
   DEV_Module_Init();
-
-  printf("e-Paper Init and Clear...\r\n");
-  EPD_7IN5_V2_Init();
-  EPD_7IN5_V2_Clear();
-  DEV_Delay_ms(500);
-
-  // Create a new image cache
-  UWORD Imagesize = ((EPD_WIDTH % 8 == 0)? (EPD_WIDTH / 8 ): (EPD_WIDTH / 8 + 1)) * EPD_HEIGHT;
-  if((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL) {
-      printf("Failed to apply for black memory...\r\n");
-      while(1);
-  }
-  printf("Paint_NewImage\r\n");
-  Paint_NewImage(BlackImage, EPD_WIDTH, EPD_HEIGHT, 0, WHITE);
-  Paint_SelectImage(BlackImage);
-  Paint_Clear(WHITE);
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
@@ -65,24 +53,82 @@ void setup() {
   }
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 
-  // Draw Calendar
-  drawCalendar(&timeinfo);
+  // Calculate Year/Month for fetching
+  int year = timeinfo.tm_year + 1900;
+  int month = timeinfo.tm_mon + 1;
+  int daysInMonth;
+  if (month == 2) {
+    if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) daysInMonth = 29;
+    else daysInMonth = 28;
+  } else if (month == 4 || month == 6 || month == 9 || month == 11) {
+    daysInMonth = 30;
+  } else {
+    daysInMonth = 31;
+  }
 
-  // Display the frame
-  EPD_7IN5_V2_Display(BlackImage);
-  DEV_Delay_ms(2000);
+  // Fetch Events
+  DynamicJsonDocument *doc = new DynamicJsonDocument(65536);
+  fetchEvents(year, month, daysInMonth, doc);
+  
+  // Compute Hash
+  uint32_t currentHash = computeEventsHash(doc);
+  Serial.printf("Last Hash: %u, Current Hash: %u\n", lastEventHash, currentHash);
+  Serial.printf("Last Day: %d, Current Day: %d\n", lastDay, timeinfo.tm_mday);
 
-  // Sleep
-  printf("Goto Sleep...\r\n");
-  EPD_7IN5_V2_Sleep();
-  free(BlackImage);
-  BlackImage = NULL;
+  // Check if update is needed
+  // Update if:
+  // 1. It's a new day (midnight update or first run)
+  // 2. Events have changed
+  bool needUpdate = (timeinfo.tm_mday != lastDay) || (currentHash != lastEventHash);
 
-  // Deep Sleep for 1 hour (3600 seconds)
+  if (needUpdate) {
+      printf("Update required. Initializing Display...\r\n");
+      
+      // Initialize Display
+      EPD_7IN5_V2_Init();
+      EPD_7IN5_V2_Clear();
+      DEV_Delay_ms(500);
+
+      // Create a new image cache
+      UWORD Imagesize = ((EPD_WIDTH % 8 == 0)? (EPD_WIDTH / 8 ): (EPD_WIDTH / 8 + 1)) * EPD_HEIGHT;
+      if((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL) {
+          printf("Failed to apply for black memory...\r\n");
+          while(1);
+      }
+      Paint_NewImage(BlackImage, EPD_WIDTH, EPD_HEIGHT, 0, WHITE);
+      Paint_SelectImage(BlackImage);
+      Paint_Clear(WHITE);
+
+      // Draw Calendar
+      drawCalendar(&timeinfo, doc);
+
+      // Display the frame
+      EPD_7IN5_V2_Display(BlackImage);
+      DEV_Delay_ms(2000);
+
+      // Sleep Display
+      printf("Goto Sleep...\r\n");
+      EPD_7IN5_V2_Sleep();
+      free(BlackImage);
+      BlackImage = NULL;
+
+      // Update State
+      lastEventHash = currentHash;
+      lastDay = timeinfo.tm_mday;
+  } else {
+      printf("No changes and not a new day. Skipping display update.\r\n");
+  }
+
+  delete doc;
+
+  // Deep Sleep until next hour
   // ESP32 will restart after waking up
-  uint64_t sleepTime = 3600ULL * 1000000ULL; // 1 hour in microseconds
+  long sleepSeconds = (60 - timeinfo.tm_min) * 60 - timeinfo.tm_sec;
+  if (sleepSeconds <= 0) sleepSeconds = 3600; // Safety fallback
+
+  uint64_t sleepTime = (uint64_t)sleepSeconds * 1000000ULL;
   esp_sleep_enable_timer_wakeup(sleepTime);
-  Serial.println("Entering Deep Sleep for 1 hour...");
+  Serial.printf("Entering Deep Sleep for %ld seconds...\r\n", sleepSeconds);
   esp_deep_sleep_start();
 }
 
@@ -338,7 +384,7 @@ void drawEventsForDay(int year, int month, int day, int x, int y, int w, int h, 
   }
 }
 
-void drawCalendar(struct tm *timeinfo) {
+void drawCalendar(struct tm *timeinfo, DynamicJsonDocument *doc) {
   int year = timeinfo->tm_year + 1900;
   int month = timeinfo->tm_mon + 1; // 1-12
   int today = timeinfo->tm_mday; // Today's date
@@ -379,12 +425,6 @@ void drawCalendar(struct tm *timeinfo) {
   // (startDayOfWeek + daysInMonth + 6) / 7 gives the number of rows
   int numWeeks = (startDayOfWeek + daysInMonth + 6) / 7;
   int cellHeight = (EPD_HEIGHT - headerHeight) / numWeeks;
-
-  // Fetch Events
-  // Allocate on heap to avoid stack overflow
-  // Increased size to hold events from multiple calendars
-  DynamicJsonDocument *doc = new DynamicJsonDocument(65536); // 64KB
-  fetchEvents(year, month, daysInMonth, doc);
 
   // Draw Grid and Days
   int currentDay = 1;
@@ -437,6 +477,22 @@ void drawCalendar(struct tm *timeinfo) {
       currentDay++;
     }
   }
-  
-  delete doc;
+}
+
+uint32_t computeEventsHash(DynamicJsonDocument *doc) {
+  uint32_t hash = 5381;
+  JsonArray events = doc->as<JsonArray>();
+  for (JsonObject event : events) {
+    const char* summary = event["summary"];
+    if (summary) {
+        for (const char* p = summary; *p; p++) hash = ((hash << 5) + hash) + *p;
+    }
+    // Hash start time
+    const char* start = event["start"]["dateTime"];
+    if (!start) start = event["start"]["date"];
+    if (start) {
+        for (const char* p = start; *p; p++) hash = ((hash << 5) + hash) + *p;
+    }
+  }
+  return hash;
 }
