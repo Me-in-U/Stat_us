@@ -47,7 +47,11 @@ def generate_c_font(ttf_path, size, out_path):
                 h = bbox[3] - bbox[1]
 
                 # Center in the ASCII width
-                x = (ascii_width - w) // 2 - bbox[0]
+                if char == "[" or char == "]":
+                    # Left align the ink to the start of the cell
+                    x = -bbox[0]
+                else:
+                    x = (ascii_width - w) // 2 - bbox[0]
 
                 # Prevent left clipping for wide characters
                 if x + bbox[0] < 0:
