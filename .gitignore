@@ -56,3 +56,4 @@ vscode_plugin/**/out/
 *.tmp
 *.swp
 esp32_e_display/eink_clock_v3/secrets.h
+esp32_e_display/eink_elevator/secrets.h
