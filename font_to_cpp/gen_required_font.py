@@ -5,7 +5,7 @@ from PIL import Image, ImageFont, ImageDraw
 # Essential characters for Elevator Display
 # Added Weather/Environment related characters
 REQUIRED_HANGUL = (
-    "0123456789층엘리베이터위치호출대기중현재"
+    "0123456789층엘리베이터위치호출대기중현재심야절전"
     "온도습강수확률미세먼지풍속날씨"
     "보통나쁨좋음매우최악"
     "맑음구름많조금흐림비눈안개"

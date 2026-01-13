@@ -300,20 +300,15 @@ void updateDisplay(String statusText) {
   Paint_DrawRectangle(2, 2, EPD_WIDTH - 3, EPD_HEIGHT - 3, BLACK, DOT_PIXEL_2X2, DRAW_FILL_EMPTY);
 
   // --- 동적 콘텐츠 ---
-  if (statusText == "심야절전중") {
-      Paint_DrawString_CN(40, 118, "심야절전중", &Font64KR, BLACK, WHITE);
-  } else {
-      // 일반 모드 (호출대기중 OR 층수 표시)
-      // 상단: 텍스트 (호출대기중 or XX층)
-      // 하단: 날씨 정보
-      
       // 0. 날씨 데이터 확인
       if (gWeather.temp == "") {
           fetchWeatherInfo();
       }
 
       // 1. 상단 텍스트 그리기 (Y=33)
-      if (statusText == "호출대기중") {
+      if (statusText == "심야절전중") {
+           Paint_DrawString_CN(40, 33, "심야절전중", &Font64KR, BLACK, WHITE);
+      } else if (statusText == "호출대기중") {
            Paint_DrawString_CN(40, 33, "호출대기중", &Font64KR, BLACK, WHITE);
       } else {
           // "XX층" 그리기
@@ -422,7 +417,6 @@ void updateDisplay(String statusText) {
           int w = (gWeather.cond.length() < 4) ? 40 : gWeather.cond.length() * 11;
           Paint_DrawString_CN(center3 - w/2, tableY + rowH + 50, gWeather.cond.c_str(), &Font20KR, BLACK, WHITE); 
       } 
-  }
 
   // 3. 디스플레이 전송
   if (fullRefresh) {
