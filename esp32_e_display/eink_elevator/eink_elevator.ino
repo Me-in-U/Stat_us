@@ -356,65 +356,72 @@ void updateDisplay(String statusText) {
       int w1 = 77;
       int startX1 = center1 - w1/2;
       Paint_DrawBitmap(startX1, tableY + 10, Icon_Thermometer, 32, 32, BLACK);
-      Paint_DrawString_CN(startX1 + 37, tableY + 18, "온도", &Font20KR, BLACK, WHITE);
+      Paint_DrawString_CN(startX1 + 37, tableY + 14, "온도", &Font20KR, BLACK, WHITE);
       
       if (gWeather.temp != "" && gWeather.temp != "unavailable") {
+          int charW = Maple20.Width;
           int tLen = gWeather.temp.length();
-          int valW = tLen * 11;
-          int totalW = valW + 4 + 11;
+          int valW = tLen * charW;
+          int degreeGap = 10;
+          int totalW = valW + degreeGap + charW;
           int startX = center1 - totalW/2;
           int startY = tableY + 50;
-          Paint_DrawString_CN(startX, startY, gWeather.temp.c_str(), &Font20KR, BLACK, WHITE);
-          Paint_DrawCircle(startX + valW + 3, startY + 6, 2, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-          Paint_DrawString_CN(startX + valW + 7, startY, "C", &Font20KR, BLACK, WHITE);
+          Paint_DrawString_EN(startX, startY, gWeather.temp.c_str(), &Maple20, WHITE, BLACK);
+          // Draw degree symbol background and circle
+          Paint_DrawRectangle(startX + valW, startY, startX + valW + degreeGap, startY + Maple20.Height, WHITE, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+          Paint_DrawCircle(startX + valW + 4, startY + 6, 2, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
+          Paint_DrawString_EN(startX + valW + degreeGap, startY, "C", &Maple20, WHITE, BLACK);
       } else {
-           Paint_DrawString_CN(center1 - 10, tableY + 50, "--", &Font20KR, BLACK, WHITE);
+           Paint_DrawString_EN(center1 - Maple20.Width, tableY + 50, "--", &Maple20, WHITE, BLACK);
       }
 
       // 1행 2열: 강수확률
       int w2 = 117;
       int startX2 = center2 - w2/2;
       Paint_DrawBitmap(startX2, tableY + 10, Icon_Rain, 32, 32, BLACK);
-      Paint_DrawString_CN(startX2 + 37, tableY + 18, "강수확률", &Font20KR, BLACK, WHITE);
+      Paint_DrawString_CN(startX2 + 37, tableY + 14, "강수확률", &Font20KR, BLACK, WHITE);
       if (gWeather.rain != "" && gWeather.rain != "unavailable") {
-          int vLen = gWeather.rain.length() * 11;
-          Paint_DrawString_CN(center2 - vLen/2, tableY + 50, gWeather.rain.c_str(), &Font20KR, BLACK, WHITE);
+          int vLen = gWeather.rain.length() * Maple20.Width;
+          Paint_DrawString_EN(center2 - vLen/2, tableY + 50, gWeather.rain.c_str(), &Maple20, WHITE, BLACK);
       }
 
       // 1행 3열: 미세먼지
       int w3 = 117;
       int startX3 = center3 - w3/2;
       Paint_DrawBitmap(startX3, tableY + 10, Icon_Dust, 32, 32, BLACK);
-      Paint_DrawString_CN(startX3 + 37, tableY + 18, "미세먼지", &Font20KR, BLACK, WHITE);
+      Paint_DrawString_CN(startX3 + 37, tableY + 14, "미세먼지", &Font20KR, BLACK, WHITE);
       if (gWeather.dust != "" && gWeather.dust != "unavailable") {
-          int w = (gWeather.dust.length() < 4) ? 40 : gWeather.dust.length() * 11;
+          // 한글 3바이트 가정, 글자당 약 22픽셀 계산 (기존 21은 바이트당 계산되어 너무 넓었음)
+          int w = (gWeather.dust.length() / 3) * 22; 
+          // 영문/숫자가 포함될 경우 오차가 있을 수 있으나 날씨 상태는 주로 한글임
           Paint_DrawString_CN(center3 - w/2, tableY + 50, gWeather.dust.c_str(), &Font20KR, BLACK, WHITE);
       }
 
       // 2행 1열: 습도
       int startX4 = center1 - 77/2;
       Paint_DrawBitmap(startX4, tableY + rowH + 10, Icon_Drop, 32, 32, BLACK); 
-      Paint_DrawString_CN(startX4 + 37, tableY + rowH + 18, "습도", &Font20KR, BLACK, WHITE);
+      Paint_DrawString_CN(startX4 + 37, tableY + rowH + 13, "습도", &Font20KR, BLACK, WHITE);
        if (gWeather.humi != "" && gWeather.humi != "unavailable") {
-          int vLen = gWeather.humi.length() * 11;
-          Paint_DrawString_CN(center1 - vLen/2, tableY + rowH + 50, gWeather.humi.c_str(), &Font20KR, BLACK, WHITE);
+          int vLen = gWeather.humi.length() * Maple20.Width;
+          Paint_DrawString_EN(center1 - vLen/2, tableY + rowH + 50, gWeather.humi.c_str(), &Maple20, WHITE, BLACK);
       }
 
       // 2행 2열: 풍속
       int startX5 = center2 - 77/2;
       Paint_DrawBitmap(startX5, tableY + rowH + 10, Icon_Wind, 32, 32, BLACK);
-      Paint_DrawString_CN(startX5 + 37, tableY + rowH + 18, "풍속", &Font20KR, BLACK, WHITE);
+      Paint_DrawString_CN(startX5 + 37, tableY + rowH + 14, "풍속", &Font20KR, BLACK, WHITE);
       if (gWeather.wind != "" && gWeather.wind != "unavailable") {
-          int vLen = gWeather.wind.length() * 11;
-          Paint_DrawString_CN(center2 - vLen/2, tableY + rowH + 50, gWeather.wind.c_str(), &Font20KR, BLACK, WHITE);
+          int vLen = gWeather.wind.length() * Maple20.Width;
+          Paint_DrawString_EN(center2 - vLen/2, tableY + rowH + 50, gWeather.wind.c_str(), &Maple20, WHITE, BLACK);
       }
 
       // 2행 3열: 날씨 상태
       int startX6 = center3 - 77/2;
       Paint_DrawBitmap(startX6, tableY + rowH + 10, Icon_Cloud, 32, 32, BLACK);
-      Paint_DrawString_CN(startX6 + 37, tableY + rowH + 18, "날씨", &Font20KR, BLACK, WHITE);
+      Paint_DrawString_CN(startX6 + 37, tableY + rowH + 14, "날씨", &Font20KR, BLACK, WHITE);
       if (gWeather.cond != "" && gWeather.cond != "unavailable") {
-          int w = (gWeather.cond.length() < 4) ? 40 : gWeather.cond.length() * 11;
+          // 한글 3바이트 기준 너비 계산 수정
+          int w = (gWeather.cond.length() / 3) * 22;
           Paint_DrawString_CN(center3 - w/2, tableY + rowH + 50, gWeather.cond.c_str(), &Font20KR, BLACK, WHITE); 
       } 
 

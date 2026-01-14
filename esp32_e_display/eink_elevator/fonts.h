@@ -90,6 +90,7 @@ extern cFONT Font16KR;
 extern cFONT Font20KR;
 extern cFONT Font64KR;
 
+extern const sFONT Maple20;
 extern const sFONT Maple44;
 extern const sFONT Maple64;
 
