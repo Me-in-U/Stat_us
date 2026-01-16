@@ -1,4 +1,4 @@
-# -------- Global ignores for the repo --------
+﻿# -------- Global ignores for the repo --------
 
 # OS junk
 .DS_Store
@@ -57,3 +57,4 @@ vscode_plugin/**/out/
 *.swp
 esp32_e_display/eink_clock_v3/secrets.h
 esp32_e_display/eink_elevator/secrets.h
+secrets.h
